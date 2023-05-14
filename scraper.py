@@ -1,6 +1,8 @@
 import os
 import json
 import requests
+import pandas
+import matplotlib
 from bs4 import BeautifulSoup
 
 def get_element(ancestor, selector=None, attribute=None, return_list=False):
