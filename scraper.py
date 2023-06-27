@@ -2,9 +2,11 @@ import os
 import json
 import requests
 from bs4 import BeautifulSoup
+from flask import Flask
+from app import routes
 
 
-
+app = Flask(__name__)
 
 def get_element(ancestor, selector=None, attribute=None, return_list=False):
     try:
@@ -19,9 +21,6 @@ def get_element(ancestor, selector=None, attribute=None, return_list=False):
         return None
 
 selectors = {
-    
-    
-    
     "opinion_id": (None, "data-entry-id"),
     "author": ("span.user-post__author-name",),
     "recommendation": ("span.user-post__author-recomendation > em",),
@@ -34,44 +33,39 @@ selectors = {
     "content": ("div.user-post__text",),
     "cons": ("div.review-feature__col:has(> div.review-feature__title--negatives) > div.review-feature__item", None, True),
     "pros": ("div.review-feature__col:has(> div.review-feature__title--positives) > div.review-feature__item", None, True)
-    
-    
 }
 
-#product_code = input("Podaj kod produktu: ")
-product_code = "25654253"
-url = f"https://www.ceneo.pl/{product_code}#tab=reviews"
-opinions_all = []
+@app.route('/')
+def scrape_opinions():
+    product_code = "25654253"
+    url = f"https://www.ceneo.pl/{product_code}#tab=reviews"
+    opinions_all = []
 
-while url:
-    print(url)
-    
-    
-    response = requests.get(url)
+    while url:
+        response = requests.get(url)
 
-    if response.status_code == requests.codes.ok:
-        page_dom = BeautifulSoup(response.text, "html.parser")
-        opinions = page_dom.select("div.js_product-review")
+        if response.status_code == requests.codes.ok:
+            page_dom = BeautifulSoup(response.text, "html.parser")
+            opinions = page_dom.select("div.js_product-review")
 
-        for opinion in opinions:
-            
-            single_opinion = {}
-            for key, value in selectors.items():
-                single_opinion[key] = get_element(opinion, *value)
-            opinions_all.append(single_opinion)
+            for opinion in opinions:
+                single_opinion = {}
+                for key, value in selectors.items():
+                    single_opinion[key] = get_element(opinion, *value)
+                opinions_all.append(single_opinion)
 
-        try:
-            url = "https://www.ceneo.pl"+get_element(page_dom, "a.pagination__next", "href")
-        except TypeError:
-            url = None
+            try:
+                url = "https://www.ceneo.pl" + get_element(page_dom, "a.pagination__next", "href")
+            except TypeError:
+                url = None
 
-if not os.path.exists("./opinions/"):
-    os.mkdir("./opinions/")
+    if not os.path.exists("./opinions/"):
+        os.mkdir("./opinions/")
 
-with open(f"./opinions/{product_code}.json", "w", encoding="UTF-8") as jf:
-    json.dump(opinions_all, jf, indent=4, ensure_ascii=False)
+    with open(f"./opinions/{product_code}.json", "w", encoding="UTF-8") as jf:
+        json.dump(opinions_all, jf, indent=4, ensure_ascii=False)
 
-    
-    
-    
-#print(response.status_code)
+    return "Opinions scraped and saved!"
+
+if __name__ == '__main__':
+    app.run()(debug=True)
